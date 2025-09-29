@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-  <meta charset="UTF-8" />
-  <title>Rive with Data Binding</title>
-  <script src="https://unpkg.com/@rive-app/canvas@latest"></script>
+  <meta charset="UTF-8">
+  <title>Rive Interactive Prototype</title>
+  <script src="https://unpkg.com/@rive-app/canvas"></script>
+  <script src="https://unpkg.com/@rive-app/canvas@2.24.0"></script>
   <style>
     body {
       display: flex;
@@ -12,9 +12,8 @@
       align-items: center;
       height: 100vh;
       margin: 0;
-      background: #f0f0f0;
+      background: #f5f5f5;
     }
-
     canvas {
       width: 400px;
       height: 400px;
@@ -22,26 +21,20 @@
     }
   </style>
 </head>
-
 <body>
   <canvas id="riveCanvas" width="400" height="400"></canvas>
 
   <script>
-    // ---- Configuration ----
-    const RIVE_SRC = "ace motion_4.riv";           // path or URL to your .riv
-    const VIEW_MODEL_NAME = "View Model 1";     // name of the view model in the Rive editor
-    const INSTANCE_NAME = "Default";            // name of the instance (or use default)
-    // Names of properties that are bound in your view model
-    const PROP_HOVER = "isHover";     // a Boolean property
-    const PROP_CLICK = "Click";     // a Trigger property (or use trigger type)
+    const RIVE_SRC = "ace_test.riv"; // Replace with your .riv file path or URL
+    const VIEW_MODEL_NAME = "View Model 1"; // Replace with your ViewModel name
+    const INSTANCE_NAME = "Default"; // Replace with your instance name if needed
 
-    // Create Rive with autoBind = false so we can bind manually
     const riveAnim = new rive.Rive({
       src: RIVE_SRC,
       canvas: document.getElementById("riveCanvas"),
       autoplay: true,
-      stateMachines: [],   // if you rely purely on data binding, you may not explicitly list stateMachines
-      autoBind: true,     // disable auto-binding so we manually bind the instance
+      stateMachines: [],
+      autoBind: false,
       onLoad: () => {
         console.log("✅ Rive loaded");
         setupBinding();
@@ -54,35 +47,27 @@
     let viewModelInstance = null;
 
     function setupBinding() {
-      // 1. Get view model by name (or fallback to default)
       const vm = riveAnim.viewModelByName(VIEW_MODEL_NAME);
       if (!vm) {
         console.error("View model not found:", VIEW_MODEL_NAME);
         return;
       }
 
-      // 2. Create or retrieve the instance (by name or default)
-      // Use default instance if named one doesn't exist
       viewModelInstance = vm.instanceByName(INSTANCE_NAME) || vm.defaultInstance();
       if (!viewModelInstance) {
         console.error("View model instance not found:", INSTANCE_NAME);
         return;
       }
 
-      // 3. Bind the instance — this links the view model instance into the artboard / state machines
       riveAnim.bindViewModelInstance(viewModelInstance);
-
-      // Now you can access bound properties (booleans, triggers, enums, etc.)
       console.log("Bound VM instance:", viewModelInstance);
     }
 
-    // Helper to safely get a property (boolean, trigger, etc.)
     function prop(name) {
       if (!viewModelInstance) {
         console.warn("No viewModelInstance available yet");
         return null;
       }
-      // Try different typed getters
       if (viewModelInstance.boolean) {
         return viewModelInstance.boolean(name);
       }
@@ -95,34 +80,30 @@
       if (viewModelInstance.enum) {
         return viewModelInstance.enum(name);
       }
-      // fallback: try generic property
       return viewModelInstance.property(name);
     }
 
-    // Wire interactions after binding
     const canvas = document.getElementById("riveCanvas");
     canvas.addEventListener("mouseenter", () => {
-      const p = prop(PROP_HOVER);
+      const p = prop("isHover");
       if (p && "value" in p) {
         p.value = true;
       }
     });
     canvas.addEventListener("mouseleave", () => {
-      const p = prop(PROP_HOVER);
+      const p = prop("isHover");
       if (p && "value" in p) {
         p.value = false;
       }
     });
     canvas.addEventListener("click", () => {
-      const p = prop(PROP_CLICK);
+      const p = prop("Click");
       if (p && typeof p.trigger === "function") {
         p.trigger();
       } else if (p && typeof p.value !== "undefined") {
-        // fallback if trigger isn't available
         p.value = true;
       }
     });
   </script>
 </body>
-
 </html>
