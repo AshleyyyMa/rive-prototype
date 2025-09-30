@@ -1,109 +1,70 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Rive Interactive Prototype</title>
-  <script src="https://unpkg.com/@rive-app/canvas"></script>
-  <script src="https://unpkg.com/@rive-app/canvas@2.24.0"></script>
-  <style>
-    body {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-      background: #f5f5f5;
-    }
-    canvas {
-      width: 400px;
-      height: 400px;
-      cursor: pointer;
-    }
-  </style>
-</head>
-<body>
-  <canvas id="riveCanvas" width="400" height="400"></canvas>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Rive Hover Prototype</title>
+    <style>
+      /* Optional: make canvas responsive */
+      #rive-canvas { width: 400px; height: 400px; display: block; }
+    </style>
+  </head>
+  <body>
+    <canvas id="rive-canvas" width="400" height="400"></canvas>
 
-  <script>
-    const RIVE_SRC = "ace_test.riv"; // Replace with your .riv file path or URL
-    const VIEW_MODEL_NAME = "View Model 1"; // Replace with your ViewModel name
-    const INSTANCE_NAME = "Default"; // Replace with your instance name if needed
+    <!-- Rive Web (Canvas) -->
+    <script src="https://unpkg.com/@rive-app/canvas"></script>
+    <script>
+      // Replace with your hosted .riv file URL
+      const RIV_SRC = "ace_test.riv"; // e.g., yourfile.riv
+      const STATE_MACHINE_NAME = "State Machine 1"; // match the state machine name in your file
 
-    const riveAnim = new rive.Rive({
-      src: RIVE_SRC,
-      canvas: document.getElementById("riveCanvas"),
-      autoplay: true,
-      stateMachines: [],
-      autoBind: false,
-      onLoad: () => {
-        console.log("✅ Rive loaded");
-        setupBinding();
-      },
-      onLoadError: (err) => {
-        console.error("Failed to load Rive:", err);
-      }
-    });
+      const canvasEl = document.getElementById("rive-canvas");
 
-    let viewModelInstance = null;
+      const riveInstance = new rive.Rive({
+        src: RIV_SRC,
+        canvas: canvasEl,
+        autoplay: true,
+        stateMachines: STATE_MACHINE_NAME,
+        // autoBind optional. If your file uses Data Binding defaults, set true.
+        autoBind: true,
+        onLoad: () => {
+          // Ensure crisp rendering on high-DPI displays
+          riveInstance.resizeDrawingSurfaceToCanvas();
 
-    function setupBinding() {
-      const vm = riveAnim.viewModelByName(VIEW_MODEL_NAME);
-      if (!vm) {
-        console.error("View model not found:", VIEW_MODEL_NAME);
-        return;
-      }
+          // Grab inputs for the named state machine
+          const inputs = riveInstance.stateMachineInputs(STATE_MACHINE_NAME);
 
-      viewModelInstance = vm.instanceByName(INSTANCE_NAME) || vm.defaultInstance();
-      if (!viewModelInstance) {
-        console.error("View model instance not found:", INSTANCE_NAME);
-        return;
-      }
+          // Expect a boolean input named "hover"
+          const hoverInput = inputs.find((i) => i.name === "isHover");
 
-      riveAnim.bindViewModelInstance(viewModelInstance);
-      console.log("Bound VM instance:", viewModelInstance);
-    }
+          // Basic hover handling
+          canvasEl.addEventListener("mouseenter", () => {
+            if (hoverInput && hoverInput.type === "bool") hoverInput.value = true;
+          });
 
-    function prop(name) {
-      if (!viewModelInstance) {
-        console.warn("No viewModelInstance available yet");
-        return null;
-      }
-      if (viewModelInstance.boolean) {
-        return viewModelInstance.boolean(name);
-      }
-      if (viewModelInstance.trigger) {
-        return viewModelInstance.trigger(name);
-      }
-      if (viewModelInstance.number) {
-        return viewModelInstance.number(name);
-      }
-      if (viewModelInstance.enum) {
-        return viewModelInstance.enum(name);
-      }
-      return viewModelInstance.property(name);
-    }
+          canvasEl.addEventListener("mouseleave", () => {
+            if (hoverInput && hoverInput.type === "bool") hoverInput.value = false;
+          });
 
-    const canvas = document.getElementById("riveCanvas");
-    canvas.addEventListener("mouseenter", () => {
-      const p = prop("isHover");
-      if (p && "value" in p) {
-        p.value = true;
-      }
-    });
-    canvas.addEventListener("mouseleave", () => {
-      const p = prop("isHover");
-      if (p && "value" in p) {
-        p.value = false;
-      }
-    });
-    canvas.addEventListener("click", () => {
-      const p = prop("Click");
-      if (p && typeof p.trigger === "function") {
-        p.trigger();
-      } else if (p && typeof p.value !== "undefined") {
-        p.value = true;
-      }
-    });
-  </script>
-</body>
+          // Optional: drive position with the cursor (if your SM has number inputs)
+          const xInput = inputs.find((i) => i.name === "cursorX");
+          const yInput = inputs.find((i) => i.name === "cursorY");
+
+          canvasEl.addEventListener("mousemove", (e) => {
+            const rect = canvasEl.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            if (xInput && xInput.type === "number") xInput.value = x;
+            if (yInput && yInput.type === "number") yInput.value = y;
+          });
+
+          // Keep animation crisp on window resize
+          window.addEventListener("resize", () => {
+            riveInstance.resizeDrawingSurfaceToCanvas();
+          });
+        },
+      });
+    </script>
+  </body>
 </html>
